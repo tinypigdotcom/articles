@@ -1,0 +1,48 @@
+
+f'lyt'$PF'xi => \&jkF'x0j@a
+my %actions = (
+    'start_shopping',
+    'add_item',
+    'remove_item',
+    'use_coupon',
+    'checkout',
+);
+
+
+| Step | Keys  | Meaning                                     |
+| 0    | 0     | Go to the beginning of the line             |
+|      |       | (always start there)                        |
+| 1    | qa    | Start recording a macro into buffer 'a'     |
+| 2    | f'    | Find the next single quote                  |
+|      |       | (always start with a find. That way,        |
+|      |       | in the infinite loop we are creating,       |
+|      |       | when it fails the loop will end)            |
+| 3    | l     | go right to get to first "real" character   |
+| 4    | yt'   | Yank To next single quote (saving the word) |
+| 5    | $     | go to end of line                           |
+| 6    | P     | Put (before the comma)                      |
+| 7    | F'    | Find the previous single quote              |
+| 8    | x     | delete it                                   |
+| 9    | i     | start inserting                             |
+| 10   | => \& | (literal characters to insert)              |
+| 11   | <ESC> | Escape, leaving insert mode                 |
+| 12   | F'    | Find the previous                           |
+| 13   | x     | delete it                                   |
+| 14   | 0     | Go to the beginning of the line             |
+| 15   | j     | Go down a line                              |
+| 16   | @a    | Run macro 'a'                               |
+
+Now you start the process by typing @a. If you have made a mistake and it starts going haywire (this happens to me once in a while) just <CTRL>-c and <ESCAPE> and u for undo and it should go back to the way it was before you ran the macro.
+
+Here's what it looks like in practice:
+
+Note:
+
+I have this line in my .vimrc file:
+map z @az
+
+I don't use "z" so I have it run @a on an infinite loop which allows me to skip step 16 from the example.
+
+Sidenote: Tabular and the accompanying macro "align"
+http://vimcasts.org/episodes/aligning-text-with-tabular-vim/
+
