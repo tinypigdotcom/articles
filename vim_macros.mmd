@@ -1,48 +1,89 @@
+Title: Fixing Multiple Lines with Vim Macros
+Author:	David M. Bradford
+css: table.css
+Base Header Level:	2  
 
-f'lyt'$PF'xi => \&jkF'x0j@a
-my %actions = (
-    'start_shopping',
-    'add_item',
-    'remove_item',
-    'use_coupon',
-    'checkout',
-);
+Fixing Multiple Lines with Vim Macros
+=====================================
 
+Sometimes I have a tedius code change where I have to perform the same task on multiple lines in vim and I can't use '.' because each line is a little different or the changes are too complicated. In this situation, I use a recursive macro in vim.
 
-| Step | Keys  | Meaning                                     |
-| 0    | 0     | Go to the beginning of the line             |
-|      |       | (always start there)                        |
-| 1    | qa    | Start recording a macro into buffer 'a'     |
-| 2    | f'    | Find the next single quote                  |
-|      |       | (always start with a find. That way,        |
-|      |       | in the infinite loop we are creating,       |
-|      |       | when it fails the loop will end)            |
-| 3    | l     | go right to get to first "real" character   |
-| 4    | yt'   | Yank To next single quote (saving the word) |
-| 5    | $     | go to end of line                           |
-| 6    | P     | Put (before the comma)                      |
-| 7    | F'    | Find the previous single quote              |
-| 8    | x     | delete it                                   |
-| 9    | i     | start inserting                             |
-| 10   | => \& | (literal characters to insert)              |
-| 11   | <ESC> | Escape, leaving insert mode                 |
-| 12   | F'    | Find the previous                           |
-| 13   | x     | delete it                                   |
-| 14   | 0     | Go to the beginning of the line             |
-| 15   | j     | Go down a line                              |
-| 16   | @a    | Run macro 'a'                               |
+Here, I started with a list of items that I want to turn into a dispatch table - the code itself isn't important here, it's the transformation that I want to illustrate:
 
-Now you start the process by typing @a. If you have made a mistake and it starts going haywire (this happens to me once in a while) just <CTRL>-c and <ESCAPE> and u for undo and it should go back to the way it was before you ran the macro.
+    my %actions = (
+        'start_shopping',
+        'add_item',
+        'remove_item',
+        'use_coupon',
+        'checkout',
+    );
+
+  Step     | Keys                 | Meaning
+  -------- | -------------------- | -------------------------------------------
+   1       | `qqq`                | Start and immediately stop recording macro into buffer 'q', to empty it
+   2       | `qq`                 | Start recording a macro into buffer 'q'
+   3       | `0`                  | Go to the beginning of the line (always start there, if possible, for consistency)
+   4       | `f'`                 | Find the next single quote (always start with a find. That way, in the infinite loop we are creating, when it fails the loop will end)
+   5       | `l`                  | go right to get to first "real" character
+   6       | `yw`                 | Yank the word
+   7       | `$`                  | go to end of line
+   8       | `P`                  | Put (before the comma)
+   9       | `F'`                 | Find the previous single quote
+  10       | `x`                  | delete it
+  11       | `i`                  | start inserting
+  12       | `<SPACE>=><SPACE>\&` | (literal characters to insert)
+  13       | `<ESC>`              | Escape, leaving insert mode
+  14       | `F'`                 | Find the previous
+  15       | `x`                  | delete it
+  16       | `0`                  | Go to the beginning of the line
+  17       | `j`                  | Go down a line
+  18       | `@q`                 | Add the instruction to start running macro 'q' again, creating the recursive call
+  19       | `q`                  | Stop recording
+  20       | `@q`                 | Actually run macro 'q'
+
+If you have made a mistake and it starts going haywire (this happens to me once in a while) just `<CTRL>-c` and `<ESCAPE>` and `u` for undo and it should go back to the way it was before you ran the macro.
 
 Here's what it looks like in practice:
 
+![](fix_lines.gif)
+
 Note:
 
-I have this line in my .vimrc file:
-map z @az
+I have this line in my `.vimrc` file:
 
-I don't use "z" so I have it run @a on an infinite loop which allows me to skip step 16 from the example.
+    map z @qz
 
-Sidenote: Tabular and the accompanying macro "align"
-http://vimcasts.org/episodes/aligning-text-with-tabular-vim/
+Since I don't use z's default functionality, instead I have it run `@q` on an infinite loop which allows me to skip step 18 from the example and then step 20 just becomes "`z`".
+
+For this next group of commands, I'm going to use the same concept to align all the `=>`.  The block must begin with the line where => is furthest to the right. If it doesn't belong there, you can always put it there to align it and then move it back to its place afterward. We'll start on the second line this time since the first line is already positioned correctly.
+
+  Step     | Keys                 | Meaning
+  -------- | -------------------- | -------------------------------------------
+   1       | `qqq`                | Start and immediately stop recording macro into buffer 'q', to empty it
+   2       | `qq`                 | Start recording a macro into buffer 'q'
+   3       | `0`                  | Go to the beginning of the line
+   4       | `f=`                 | Find the next =
+   5       | `50i<SPACE><ESC>`    | Insert 50 spaces to make sure it's long enough
+   6       | `0`                  | Go to the beginning of the line
+   7       | `k`                  | Go up
+   8       | `f=`                 | Find the next =
+   9       | `j`                  | Go down
+  10       | `dw`                 | "Delete word" in this case will delete to the next non-space
+  11       | `0`                  | Go to the beginning of the line
+  12       | `j`                  | Go down a line
+  13       | `@q`                 | Add the instruction to start running macro 'q' again, creating the recursive call
+  14       | `q`                  | Stop recording
+  15       | `@q`                 | Actually run macro 'q'
+
+Here's what it looks like in practice:
+
+![](align.gif)
+
+Credit to [Hongleong](http://vim.wikia.com/wiki/Record_a_recursive_macro) for the qqq emptying idea (there is much more info at that link regarding recursive vim macros)
+
+For routinely aligning text in vim, I found this [video](http://vimcasts.org/episodes/aligning-text-with-tabular-vim/) to be extremely helpful.
+
+Just in case that disappears, I have copied two of the links included there: the [Tabular](https://github.com/godlygeek/tabular) plugin and a [macro](https://gist.github.com/287147) which uses it.
+
+Animated GIFs created with [LICEcap](http://www.cockos.com/licecap/)
 
