@@ -1,0 +1,76 @@
+Title: Vim Macros: A More Complicated Problem
+Author: David M. Bradford
+css: table.css
+Base Header Level:  2
+
+Vim Macros: A More Complicated Problem
+======================================
+
+Here's a more difficult problem than my previous post on Vim macros: I collected a bunch of links to post on my website using a simple 2-column table:
+
+    blogs.perl.org  |http://blogs.perl.org/mt/mt-cp.fcgi?__mode=view&id=3159
+    Wiki            |http://tinypig.pbworks.com/
+    Tumblr          |http://tinypigdotcom.tumblr.com/
+    WordPress       |http://tinypig.wordpress.com/
+    Perl Monks      |http://www.perlmonks.org/?node=tinypig
+    GitHub          |https://github.com/tinypigdotcom
+
+My HTML links template I want to add them to is basically this:
+
+    <h3>Links</h3>
+    <ul>
+    <li><a href="">LINK</a><br/></li>
+    </ul>
+
+Appending the first file to the second, I get this:
+
+    <h3>Links</h3>
+    <ul>
+    <li><a href="">LINK</a><br/></li>
+    </ul>
+
+    blogs.perl.org  |http://blogs.perl.org/mt/mt-cp.fcgi?__mode=view&id=3159
+    Wiki            |http://tinypig.pbworks.com/
+    Tumblr          |http://tinypigdotcom.tumblr.com/
+    WordPress       |http://tinypig.wordpress.com/
+    Perl Monks      |http://www.perlmonks.org/?node=tinypig
+    GitHub          |https://github.com/tinypigdotcom
+
+Note the pipes (`|`) separating the columns. Having these (or some other unique character) make it much easier to work with the data because we can use Vim's `F` find command to move to the exact location we need. Also note there should be a blank line at the end of the file so that we can go down successfully and our find on the pipe symbol will fail, ending the recursive macro.
+
+  Step     | Keys                 | Meaning
+  -------- | -------------------- | -------------------------------------------
+   1       | `qqq`                | Start and immediately stop recording macro into buffer 'q', to empty it
+   2       | `qq`                 | Start recording a macro into buffer 'q'
+   3       | `0`                  | Go to the beginning of the line
+   4       | `f|`                 | Find the next pipe symbol
+   5       | `0`                  | Go to the beginning of the line
+   6       | `3k`                 | Go up three times
+   7       | `Y`                  | "Yank" the current line (in this case, the link template line) into the buffer
+   8       | `p`                  | Immediately "put" the line right below, effectively duplicating it
+   9       | `3j`                 | Go down three times
+  10       | `dt|`                | "Delete to" pipe, which also captures the deleted text into the buffer
+  11       | `4k`                 | Go up four times
+  12       | `f>f>`               | Find greater-than symbol, then find the next one
+  13       | `p`                  | "Put" the buffer (the data from the first column we deleted 3 steps back)
+  14       | `ge`                 | "Go" to the "end" of the previous word
+  15       | `l`                  | Go right
+  16       | `dt<`                | Delete to greater-than symbol, effectively removing trailing space
+  17       | `0`                  | Go to the beginning of the line
+  18       | `4j`                 | Go down four times
+  19       | `l`                  | Go right, skipping over the pipe symbol
+  20       | `D`                  | Delete the rest of the line (again capturing the text)
+  21       | `4k`                 | Go up four times
+  22       | `f"`                 | Find next quote symbol in the current line
+  23       | `p`                  | "Put" the buffer (data from the second column)
+  24       | `0`                  | Go to the beginning of the line
+  25       | `4j`                 | Go down four times
+  26       | `dd`                 | Delete the current line
+  27       | `@q`                 | Add the instruction to start running macro 'q' again, creating the recursive call
+  28       | `q`                  | Stop recording
+  29       | `@q`                 | Actually run macro 'q'
+
+Here's what it looks like in practice:
+
+![](fix_lines.gif)
+
