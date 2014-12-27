@@ -1,0 +1,108 @@
+Title: How To Test Anything With Perl
+Author:	David M. Bradford
+css: table.css
+Base Header Level:	2  
+
+How To Test Anything With Perl
+==============================
+
+Lately, I've been testing a lot of different things: shell scripts, availability of web pages, and other stuff. I'm a huge fan of Perl's [Test::More](http://perldoc.perl.org/Test/More.html), so I often use it to test anything I want to test.
+
+Since a new module comes with all the ingredients I want in a new test suite, I usually just copy the mechanism from there. There may be a shorter way (certainly I could just set the files aside and use them as a template) but I think it's handy to know how to do this in case I don't have the files close at hand.
+
+Since `Test::More` is the default test module used when creating a new module, I start by running [h2xs](http://perldoc.perl.org/h2xs.html) with `-AX` switches, which includes less (see doc for `h2xs`):
+    $ h2xs -AX Foo
+    Defaulting to backwards compatibility with perl 5.18.2
+    If you intend this module to be compatible with earlier perl versions, please
+    specify a minimum perl version with the -b option.
+
+    Writing Foo/lib/Foo.pm
+    Writing Foo/Makefile.PL
+    Writing Foo/README
+    Writing Foo/t/Foo.t
+    Writing Foo/Changes
+    Writing Foo/MANIFEST
+
+
+Next, I run `perl` on `Makefile.PL` to create the `Makefile`:
+    $ cd Foo
+    $ perl Makefile.PL
+    Checking if your kit is complete...
+    Looks good
+    Writing Makefile for Foo
+    Writing MYMETA.yml and MYMETA.json
+
+At this point you can run the minimal (only one test!) test suite to prove to yourself it works:
+    $ make test
+    cp lib/Foo.pm blib/lib/Foo.pm
+    PERL_DL_NONLAZY=1 /usr/bin/perl "-MExtUtils::Command::MM" "-e" "test_harness(0, 'blib/lib', 'blib/arch')" t/*.t
+    t/Foo.t .. ok
+    All tests successful.
+    Files=1, Tests=1,  0 wallclock secs ( 0.02 usr  0.01 sys +  0.02 cusr  0.00 csys =  0.05 CPU)
+    Result: PASS
+
+Run `make test` again to capture the command that executes the test suite. The perl one-liner serves two purposes: 1. to grep the command, which is the only line of output I want, and 2. remove the path `t/` from the test files because I want my tests in the same directory. I save the command in a script called `tt`
+    $ make test | perl -ne 's{ t/}{ } && print' >tt
+
+Make that script executable for me:
+    $ chmod 700 tt
+
+Create `mytests` directory in my home directory:
+    $ mkdir ~/mytests/
+
+Move the test file and test script to `mytests` directory:
+    $ mv tt ~/mytests/
+    $ mv t/Foo.t ~/mytests/anything.t
+
+Cleanup, since I don't really care about `Foo` anymore:
+    $ cd ..
+    $ rm -rf Foo
+
+`cd` to my new test directory and run the test suite!
+    $ cd ~/mytests/
+    $ ./tt
+    anything.t .. 1/1
+    #   Failed test 'use Foo;'
+    #   at anything.t line 12.
+    #     Tried to use 'Foo'.
+    #     Error:  Can't locate Foo.pm in @INC (you may need to install the Foo module) (@INC contains: /home/dave/mytests/blib/lib /home/dave/mytests/blib/arch /home/dave/lib /home/dave/perl5/lib/site_perl/5.16.3 /home/dave/perl5/lib/perl5 /home/dave/lib /home/dave/perl5/lib/site_perl/5.16.3 /home/dave/perl5/lib/perl5 /etc/perl /usr/local/lib/perl/5.18.2 /usr/local/share/perl/5.18.2 /usr/lib/perl5 /usr/share/perl5 /usr/lib/perl/5.18 /usr/share/perl/5.18 /usr/local/lib/site_perl .) at (eval 4) line 2.
+    # BEGIN failed--compilation aborted at (eval 4) line 2.
+    # Looks like you failed 1 test of 1.
+    anything.t .. Dubious, test returned 1 (wstat 256, 0x100)
+    Failed 1/1 subtests
+
+    Test Summary Report
+    -------------------
+    anything.t (Wstat: 256 Tests: 1 Failed: 1)
+      Failed test:  1
+      Non-zero exit status: 1
+    Files=1, Tests=1,  0 wallclock secs ( 0.03 usr  0.00 sys +  0.01 cusr  0.00 csys =  0.04 CPU)
+    Result: FAIL
+    Failed 1/1 test programs. 1/1 subtests failed.
+
+Test suite does not work now because it's still set up to test the module we created earlier which now no longer exists.  I need to make my own tests.
+
+In `anything.t`, I replace the line
+    BEGIN { use_ok('Foo') };
+
+with
+    is( 1 + 1, 2, 'one plus one equals two');
+
+Then run it again:
+    $ ./tt
+    anything.t .. ok
+    All tests successful.
+    Files=1, Tests=1,  0 wallclock secs ( 0.02 usr  0.00 sys +  0.01 cusr  0.00 csys =  0.03 CPU)
+    Result: PASS
+
+Now I can add another test after my `1 + 1` test:
+    isnt( 2 + 2, 5, "two plus two isn't five" );
+
+`is()` and `isnt()` are two of many functions in `Test::More`. Making full use of its various functions allows for maximum information when there is a problem.
+
+# add another good test without increment # of tests
+# increment # of tests and run again
+# add bad test for demo: demo suite and single test
+# external program test
+# multiple test files
+
