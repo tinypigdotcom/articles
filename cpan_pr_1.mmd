@@ -1,0 +1,108 @@
+Title: My First Day on the CPAN Pull Request Challenge
+Author: David M. Bradford
+css: table.css
+Base Header Level:  2
+
+My First Day on the CPAN Pull Request Challenge
+===============================================
+
+So yesterday, I started on the [CPAN Pull Request Challenge](http://blogs.perl.org/users/neilb/2014/12/take-the-2015-cpan-pull-request-challenge.html). I was assigned the module `Devel::StackTrace::WithLexicals`, so, I read the [doc](https://metacpan.org/pod/Devel::StackTrace::WithLexicals) and installed it.
+
+The doc references two other modules' influence: [`Devel::StackTrace`](https://metacpan.org/pod/Devel::StackTrace) and [`PadWalker`](https://metacpan.org/pod/PadWalker)
+
+So I figured I'd have a look at those first. Combining two examples from the doc for `Devel::StackTrace`, I wrote this:
+
+[More](http://tinypig2.blogspot.com/2015/01/my-first-day-on-cpan-pull-request.html)
+
+<pre style='width:400px;background-color:#E9E9E9;padding: 2em;border-radius: 15px;border: 2px solid #a1a1a1;'>
+<span style='color:#595979; '>#!</span><span style='color:#007997; '>/usr/bin/perl</span>
+
+<span style='color:#200080; font-weight:bold; '>use</span> <span style='color:#200080; font-weight:bold; '>strict</span><span style='color:#406080; '>;</span>
+<span style='color:#200080; font-weight:bold; '>use</span> warnings<span style='color:#406080; '>;</span>
+
+<span style='color:#200080; font-weight:bold; '>use</span> <span style='color:#7779bb; font-weight:bold; '>Devel</span><span style='color:#308080; '>::</span><span style='color:#7779bb; font-weight:bold; '>StackTrace</span><span style='color:#406080; '>;</span>
+
+<span style='color:#200080; font-weight:bold; '>sub </span>foo <span style='color:#406080; '>{</span>
+    bar<span style='color:#308080; '>(</span>@_,1234<span style='color:#308080; '>)</span><span style='color:#406080; '>;</span>
+<span style='color:#406080; '>}</span>
+
+<span style='color:#200080; font-weight:bold; '>sub </span>bar <span style='color:#406080; '>{</span>
+    <span style='color:#200080; font-weight:bold; '>my</span> $trace <span style='color:#308080; '>=</span> <span style='color:#7779bb; font-weight:bold; '>Devel</span><span style='color:#308080; '>::</span><span style='color:#7779bb; font-weight:bold; '>StackTrace</span><span style='color:#308080; '>-></span>new<span style='color:#308080; '>(</span><span style='color:#308080; '>)</span><span style='color:#406080; '>;</span>
+    <span style='color:#200080; font-weight:bold; '>print</span> $trace<span style='color:#308080; '>-></span>as_string<span style='color:#308080; '>(</span><span style='color:#308080; '>)</span><span style='color:#406080; '>;</span> <span style='color:#595979; '># like carp</span>
+<span style='color:#406080; '>}</span>
+
+foo<span style='color:#308080; '>(</span><span style='color:#1060b6; '>'bing'</span><span style='color:#308080; '>)</span><span style='color:#406080; '>;</span>
+</pre>
+
+Which gave me this:
+
+    $ ./d.pl
+    Trace begun at d.pl line 13
+    main::bar('bing', 1234) called at d.pl line 9
+    main::foo('bing') called at d.pl line 17
+
+Neat!
+
+Next I looked at the doc for `PadWalker`. Based on the example provided, I wrote:
+
+<pre style='width:400px;background-color:#E9E9E9;padding: 2em;border-radius: 15px;border: 2px solid #a1a1a1;'>
+<span style='color:#595979; '>#!</span><span style='color:#007997; '>/usr/bin/perl</span>
+
+<span style='color:#200080; font-weight:bold; '>use</span> <span style='color:#200080; font-weight:bold; '>strict</span><span style='color:#406080; '>;</span>
+<span style='color:#200080; font-weight:bold; '>use</span> warnings<span style='color:#406080; '>;</span>
+
+<span style='color:#200080; font-weight:bold; '>use</span> PadWalker <span style='color:#200080; font-weight:bold; '>qw</span><span style='color:#800000; '>(</span><span style='color:#1060b6; '>peek_my</span><span style='color:#800000; '>)</span><span style='color:#406080; '>;</span>
+
+<span style='color:#200080; font-weight:bold; '>sub </span>foo <span style='color:#406080; '>{</span>
+    <span style='color:#200080; font-weight:bold; '>my</span> $abc <span style='color:#308080; '>=</span> <span style='color:#008c00; '>123</span><span style='color:#406080; '>;</span>
+
+    bar<span style='color:#308080; '>(</span><span style='color:#308080; '>)</span><span style='color:#406080; '>;</span>
+
+    <span style='color:#200080; font-weight:bold; '>print</span> <span style='color:#1060b6; '>"magic! $abc</span><span style='color:#0f69ff; '>\n</span><span style='color:#1060b6; '>"</span><span style='color:#406080; '>;</span>
+<span style='color:#406080; '>}</span>
+
+<span style='color:#200080; font-weight:bold; '>sub </span>bar <span style='color:#406080; '>{</span>
+    <span style='color:#200080; font-weight:bold; '>my</span> $h <span style='color:#308080; '>=</span> peek_my<span style='color:#308080; '>(</span><span style='color:#008c00; '>1</span><span style='color:#308080; '>)</span><span style='color:#406080; '>;</span>
+    $<span style='color:#007d45; '>{</span>$h<span style='color:#308080; '>-></span><span style='color:#308080; '>{</span><span style='color:#1060b6; '>'$abc'</span><span style='color:#308080; '>}</span><span style='color:#007d45; '>}</span><span style='color:#308080; '>+</span><span style='color:#308080; '>+</span><span style='color:#406080; '>;</span>
+<span style='color:#406080; '>}</span>
+
+foo<span style='color:#308080; '>(</span><span style='color:#308080; '>)</span><span style='color:#406080; '>;</span>
+</pre>
+
+Which yields:
+
+    $ ./e.pl
+    magic! 124
+
+So `bar()` increments `foo()`'s lexical variable `$abc`.  What kind of witchcraft is this?!?
+
+These are both very interesting modules. Changing lexicals from another scope defeats the purpose of a lexical, but as the doc points out, it can be useful for debugging purposes.
+
+I reviewed the documentation for `Devel::StackTrace::WithLexicals` and the code, both of which can be viewed online at [meta::cpan](https://metacpan.org/pod/Devel::StackTrace::WithLexicals). In the left column are the links "Source (raw)" and "Browse (raw)" which are both handy to use when viewing the source.
+
+Nothing immediately jumped out at me after reviewing the [pull request ideas](http://neilb.org/2014/12/31/pr-ideas.html) so I decided to contact the author to see if he had anything specific he'd like to see done. The author's contact info is usually provided in the Author section of the documentation.
+
+This is the email I sent:
+
+    Hello!
+
+    I have volunteered in the CPAN Pull Request Challenge
+    and have been assigned your module Devel::StackTrace::WithLexicals to
+    contribute to if possible.
+
+    Ideas include, but aren't limited to:
+    http://neilb.org/2014/12/31/pr-ideas.html
+
+    I'd like to know if you are receptive to contributions to this module and if
+    you had any particular needs or wishes.  I am willing to contribute with any
+    aspect (features, bugs, testing, documentation, etc.)  If you are ok with
+    contributions (pending your approval of course) but you don't have anything
+    specific in mind, I will review the PR Ideas list myself and see if I can find
+    a way to contribute.
+
+    Thank you,
+    David M. Bradford
+    http://tinypig.com
+
+This morning I received a positive response from the author. Time to get to work!
+
