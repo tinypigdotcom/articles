@@ -1,0 +1,55 @@
+Title: CPAN Pull Request Challenge: The Pull Request
+Author: David M. Bradford
+css: table.css
+Base Header Level:  2
+
+In my last [report](http://tinypig2.blogspot.com/2015/01/my-first-day-on-cpan-pull-request.html), I had received an ok from the module's author to proceed with a pull request. The first thing I did, as I had with the modules referenced by [`Devel::StackTrace::WithLexicals`](https://metacpan.org/pod/Devel::StackTrace::WithLexicals), is to write an example for myself so I could see how it worked. Working from the synopsis, I had a difficult time writing a working piece of code. It occurred to me that this was the very place I could start with a Pull Request.
+
+Since the module's functionality combines that of two other modules ([`Devel::StackTrace`](https://metacpan.org/pod/Devel::StackTrace) and [`PadWalker`](https://metacpan.org/pod/PadWalker)), I wrote a working example showing both sets of functionality: specifically, the ability to walk back through the stack and the ability to read and modify a previous frame's lexical variables.
+
+Since I had not yet specified my area of focus to the author, I send him another email including the synopsis I had written and asked him for his thoughts on my changes. He liked them but asked that I replace my `foo`s and `bar`s with more realistic names. I had thought that `foo` and `bar` kept out of the way so that only the module's functionality was on display, but he's right: although the fake variable names do stay out of the way, they provide zero context for the user to become oriented while going through the code. I decided to use a problem domain that should be familiar to many developers: the shopping cart.  Here's the synopsis I ended up with:
+
+use Devel::StackTrace::WithLexicals;
+
+sub process_user {
+    my $item_count = 20;
+    price_items();
+    print "$item_count\n";    # prints 21
+}
+
+sub price_items {
+    my $trace = Devel::StackTrace::WithLexicals->new(
+        unsafe_ref_capture => 1    # warning: can cause memory leak
+    );
+    while ( my $frame = $trace->next_frame() ) {
+        my $item_count_ref = $frame->lexical('$item_count');
+        ${$item_count_ref}++ if ref $item_count_ref eq 'SCALAR';
+    }
+}
+
+process_user();
+
+I followed this excellent step-by-step [guide](https://github.com/CPAN-PRC/resources/wiki/My-first-Pull-Request) on submitting a Pull Request and just a little while later it was approved!
+
+Afterward I found this well-written [post](http://blogs.perl.org/users/neilb/2014/07/give-your-modules-a-good-synopsis.html) about having a good synopsis. What I had written conformed pretty well with the suggestions.
+
+I had never done a pull request before this. There have been a couple times I contacted authors in the past to point out a bug or add a function, but most of the time I have not been an active participant.
+
+Why?
+
+1. I am often busy with my own projects. Lately, I have tried to get more involved in the community. Much of this inspiration has come from the company I work for now, [OmniTI](http://omniti.com), whose philosophy is very pro-open-source, speaking, contributing, etc. (side note - we're [hiring](http://omniti.com/is/hiring)!)
+
+2. I can still be painfully shy. It sounds childish to put it in those terms, but it's also accurate. It is difficult for me to "put myself out there" sometimes even if just in the form of an email.
+
+3. I had no idea where to start. This sounds like a cop-out, and in some ways it is, but I can honestly say I've spent hours looking around at different open source projects and not really found any place it looked like I could help.
+
+But my shortcomings illustrate some of the things that make the [CPAN Pull Request Challenge](http://blogs.perl.org/users/neilb/2014/12/take-the-2015-cpan-pull-request-challenge.html) such a great project.
+
+1. It's got a time-sensitive feel to it. It has dates attached to it, so feels like something you need to focus on now.
+
+2. It gave me an authority to point to when reaching out. Author: I'm contacting you not because I *personally* felt there was anything wrong with your module, but rather because this challenge told me to. So don't be mad at me! :)
+
+3. It gave me a starting point. Being assigned a module is much more focused than having someone just say "Hey - contribute to something!" Now I could still have been bogged down in "what exactly do I contribute to in this module" but the challenge comes with tons of [ideas](http://neilb.org/2014/12/31/pr-ideas.html) on things to look at as well.  Failing that, there's always "[Kwalitee](http://cpants.cpanauthors.org/kwalitee)".
+
+So, thank you, Neil Bowers - both for being a positive influence on the Perl and open source communities, and for helping me get out of my shell a bit.
+
