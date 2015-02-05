@@ -1,0 +1,64 @@
+Title: TEMPLATE_TITLE1
+Author: David M. Bradford
+css: table.css
+Base Header Level:  2
+
+How to cheat at word games with grep - the point of this article is to teach grep in a fun way, not to actually cheat at word games.
+Normal text with some `code`.
+
+considerations
+* bad words
+* proper nouns
+* apostrophes
+
+symbols
+    ^ start anchor
+    $ end anchor
+    . single character
+    {} quantifiers? maybe keep it simple?
+    [] character classes
+
+.
+..
+.*
+.\{2,3\}
+.\{,3\}
+.\{2,\}
+
+$ grep 'g.mes' /usr/share/dict/words
+Gilgamesh
+games
+gamesmanship
+gamesmanship's
+gamest
+legumes
+regimes
+
+Words Ending In Q, Z, etc
+Words By Length: 6 letter words, 4, 2 etc
+Words that Start with Q, K, etc
+Words with the letter Q, J, etc
+Consonant Words
+Vowel Words
+combining conditions
+
+two t's and two g's and min max word length
+grep 't.*t' /usr/share/dict/words | grep 'g.*g' | grep '^.\{1,8\}$'
+
+(highlight the pattern)
+
+
+    print "a block of code";
+    print "indent with spaces";
+
+   A       | Dang         | Table
+  -------- | ------------ | -------------------------------------------
+   1       | `formatted`  | whatever
+   2       | `code`       | blah blah
+
+This is a link [Nice Text](http://actual.uri.com)
+
+A link to an image:
+
+![](fix_lines.gif)
+
