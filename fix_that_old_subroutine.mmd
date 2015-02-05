@@ -1,0 +1,57 @@
+Title: TEMPLATE_TITLE1
+Author: David M. Bradford
+css: table.css
+Base Header Level:  2
+
+Normal text with some `code`.
+
+    update_shopping_cart( 314, 'apples', 3 );
+    update_shopping_cart(
+        {
+            cart_id        => 314,
+            item           => 'apples',
+            quantity       => 3,
+            apply_discount => 1,
+        }
+    );
+
+    sub update_shopping_cart {
+        my $cart_id        = shift;
+        my $item           = shift;
+        my $quantity       = shift;
+        my $apply_discount = 0;
+
+        my $param = $cart_id;
+        if ( ref $param eq 'HASH' ) {
+            $cart_id        = $param->{cart_id};
+            $item           = $param->{item};
+            $quantity       = $param->{quantity};
+            $apply_discount = $param->{apply_discount};
+        }
+
+        print "cart_id: $cart_id\n";
+        print "item: $item\n";
+        print "quantity: $quantity\n";
+        print "discount: ";
+
+        if ($apply_discount) {
+            print "applied";
+        }
+        else {
+            print "none";
+        }
+        print "\n\n";
+    }
+
+
+   A       | Dang         | Table
+  -------- | ------------ | -------------------------------------------
+   1       | `formatted`  | whatever
+   2       | `code`       | blah blah
+
+This is a link [Nice Text](http://actual.uri.com)
+
+A link to an image:
+
+![](fix_lines.gif)
+
