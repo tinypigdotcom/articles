@@ -1,24 +1,125 @@
-Title: TEMPLATE_TITLE1
+Title: Easing the Pain of Changing Directories
 Author: David M. Bradford
 css: table.css
 Base Header Level:  2
 
-"taking the pain out of changing directories"
-the point of this one is to teach more automation with a simple concept like cd
+Changing directories?!? That's one of the most basic things, why even talk about it? Two reasons:
 
-Normal text with some `code`.
+1. If you work at the command line, it's something you do frequently, you may be needlessly repeating keystrokes
+2. The scripting techniques used in this article can be used to automate other processes
 
-    print "a block of code";
-    print "indent with spaces";
+Some techniques in this article are specific to `bash`. Your shell of choice may have the same or similar functionality.
 
-   A       | Dang         | Table
-  -------- | ------------ | -------------------------------------------
-   1       | `formatted`  | whatever
-   2       | `code`       | blah blah
+mention tab completion:
 
-This is a link [Nice Text](http://actual.uri.com)
+cd to a long directory path:
 
-A link to an image:
+    $ cd /home/dave/things/shopping/shopping_cart/food/fruit/apples
 
-![](fix_lines.gif)
+cd to a long directory path using ~:
+
+    $ cd ~/things/pets/exotic/giraffes/events/Westminster_Giraffe_Show
+
+use cd - to switch between directories:
+
+    $ cd -
+    /home/dave/things/shopping/shopping_cart/food/fruit/apples
+    $ cd -
+    /home/dave/things/pets/exotic/giraffes/events/Westminster_Giraffe_Show
+
+which is fine unless you throw in a third directory:
+
+    $ cd ~/things/media/movies/comedies/buddy_comedies/Pineapple_Express
+
+we can use ^p (or up arrow) to help out here. it recalls previous commands:
+
+    $ cd /home/dave/things/shopping/shopping_cart/food/fruit/apples
+    $ cd ~/things/pets/exotic/giraffes/events/Westminster_Giraffe_Show
+
+also ^r:
+
+    (reverse-i-search)`Pine': cd ~/things/media/movies/comedies/buddy_comedies/Pineapple_Express
+    $ cd ~/things/media/movies/comedies/buddy_comedies/Pineapple_Express
+
+or bash history shortcuts:
+
+    $ !?Giraffe
+    $ cd ~/things/pets/exotic/giraffes/events/Westminster_Giraffe_Show
+
+or CDPATH:
+
+    $ CDPATH=/home/dave/things/shopping/shopping_cart/food/fruit
+    $ export CDPATH
+    $ cd apples
+    /home/dave/things/shopping/shopping_cart/food/fruit/apples
+    $ CDPATH=/home/dave/things/shopping/shopping_cart/food/fruit:/home/dave/things/pets/exotic/giraffes/events
+    $ cd Westminster_Giraffe_Show
+    /home/dave/things/pets/exotic/giraffes/events/Westminster_Giraffe_Show
+
+scripting:
+
+    $ mkdir ~/bin
+    $ echo "cd /home/dave/things/shopping/shopping_cart/food/fruit/apples" >~/bin/ap
+    $ chmod 700 ~/bin/ap
+    $ ap
+    $ pwd
+    /home/dave/things/media/movies/comedies/buddy_comedies/Pineapple_Express
+
+it didn't work!
+
+    $ . ap
+    $ pwd
+    /home/dave/things/shopping/shopping_cart/food/fruit/apples
+
+make another one:
+
+    $ echo "cd ~/things/media/movies/comedies/buddy_comedies/Pineapple_Express" >~/bin/pin
+    $ chmod 700 !$
+    $ chmod 700 ~/bin/pin
+    $ . pin
+    $ pwd
+    /home/dave/things/media/movies/comedies/buddy_comedies/Pineapple_Express
+    $ . ap
+    $ pwd
+    /home/dave/things/shopping/shopping_cart/food/fruit/apples
+
+make aliases:
+
+    $ alias ap='. ap'
+    $ alias pin='. pin'
+    $ ap
+    $ pwd
+    /home/dave/things/shopping/shopping_cart/food/fruit/apples
+    $ pin
+    $ pwd
+    /home/dave/things/media/movies/comedies/buddy_comedies/Pineapple_Express
+
+mention add to .bash_profile:
+
+make a script:
+
+    $ cat >~/bin/c
+    case $1 in
+    ap)
+    cd /home/dave/things/shopping/shopping_cart/food/fruit/apples
+    ;;
+    pi)
+    cd /home/dave/things/media/movies/comedies/buddy_comedies/Pineapple_Express
+    ;;
+    gr)
+    cd /home/dave/things/pets/exotic/giraffes/events/Westminster_Giraffe_Show
+    ;;
+    esac
+    $ chmod 700 !$
+    $ chmod 700 ~/bin/c
+    $ alias c='. c'
+    $ c ap
+    $ pwd
+    /home/dave/things/shopping/shopping_cart/food/fruit/apples
+    $ c pi
+    $ pwd
+    /home/dave/things/media/movies/comedies/buddy_comedies/Pineapple_Express
+    $ c gr
+    $ pwd
+    /home/dave/things/pets/exotic/giraffes/events/Westminster_Giraffe_Show
 
