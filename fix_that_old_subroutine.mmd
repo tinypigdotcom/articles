@@ -1,57 +1,53 @@
-Title: TEMPLATE_TITLE1
+Title: Fix Those Legacy Subroutines or Methods
 Author: David M. Bradford
 css: table.css
 Base Header Level:  2
 
-Normal text with some `code`.
-
-    update_shopping_cart( 314, 'apples', 3 );
-    update_shopping_cart(
-        {
-            cart_id        => 314,
-            item           => 'apples',
-            quantity       => 3,
-            apply_discount => 1,
-        }
-    );
+Maybe you know the feeling... you go to add an option to that method or subroutine and... *cue Jaws theme*
 
     sub update_shopping_cart {
         my $cart_id        = shift;
         my $item           = shift;
         my $quantity       = shift;
-        my $apply_discount = 0;
 
-        my $param = $cart_id;
-        if ( ref $param eq 'HASH' ) {
-            $cart_id        = $param->{cart_id};
-            $item           = $param->{item};
-            $quantity       = $param->{quantity};
-            $apply_discount = $param->{apply_discount};
+Argh. You don't want your legacy code to break but you also don't want to add a fourth unnamed parameter to the existing problem.  And the solution is simple:
+
+    sub update_shopping_cart {
+        my $cart_id        = shift;
+        my $item           = shift;
+        my $quantity       = shift;
+        my $apply_discount = 0;        # Initialize the fourth parameter
+
+        my $param1 = $cart_id;
+        if ( ref $param1 eq 'HASH' ) {
+            $cart_id        = $param1->{cart_id};
+            $item           = $param1->{item};
+            $quantity       = $param1->{quantity};
+            $apply_discount = $param1->{apply_discount};
         }
 
-        print "cart_id: $cart_id\n";
-        print "item: $item\n";
-        print "quantity: $quantity\n";
-        print "discount: ";
+Now either of these work. The legacy call:
 
-        if ($apply_discount) {
-            print "applied";
-        }
-        else {
-            print "none";
-        }
-        print "\n\n";
-    }
+    update_shopping_cart( 314, 'apples', 3 );
 
 
-   A       | Dang         | Table
-  -------- | ------------ | -------------------------------------------
-   1       | `formatted`  | whatever
-   2       | `code`       | blah blah
+...or the new style:
 
-This is a link [Nice Text](http://actual.uri.com)
+    update_shopping_cart({
+        cart_id        => 314,
+        item           => 'apples',
+        quantity       => 3,
+        apply_discount => 1,
+    });
 
-A link to an image:
+Bonus: there is no way to use the new option with the old-style call. If someone wants to use it, they'll need to switch to the new style.
 
-![](fix_lines.gif)
+Pros:
+
+* The new call is self-documenting. In the original form of the call, you see "314" in the code by itself, and it's not immediately obvious what it is. Now it's nicely labeled.
+* Now that you have added the new format, you can painlessly add additional named parameters as needed.
+
+Cons:
+
+* It may be confusing to see two different styles of calls in your codebase. But, now you can transition the old code piecemeal.
 
