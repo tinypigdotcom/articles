@@ -1,33 +1,20 @@
-Title: TEMPLATE_TITLE1
+Title: My Debug Snippet for mod_perl
 Author: David M. Bradford
 css: table.css
 Base Header Level:  2
 
-The purpose of this article is to talk about my current debugging code and why each piece.
-
-Normal text with some `code`.
+These days I find myself working on mod_perl apps. Though I would sometimes prefer a different tool, `print` has been very reliable for me. I've found it useful to create a snippet for myself that I can paste when I need to see what's going on in the application.
 
     use IO::File;
-    my $dmb_debug_oh = IO::File->new('/tmp/a.out', '>>');
-    my $dmbst = 0;
-    $dmbst++ if (defined $dmb_debug_oh);
-    my $dmb_debug_file = __FILE__; $dmb_debug_file =~ s?.*/??;
-    print $dmb_debug_oh localtime . " $dmb_debug_file:" . __LINE__ . ':' . Dumper('WHATEVER') . "\n" if $dmbst;
+    use Data::Dumper;
+    my %dmb;
+    $dmb{outfile} = '/tmp/dmb.out';
+    $dmb{oh} = IO::File->new($dmb{outfile}, '>>');
+    $dmb{mode} = 0666; chmod $dmb{mode}, $dmb{outfile};
+    $dmb{st} = 0;
+    $dmb{st}++ if defined $dmb{oh};
+    $dmb{file} = __FILE__; $dmb{file} =~ s{.*/}{};
+    print { $dmb{oh} } localtime . " $dmb{file}:" . __LINE__ . ':' . Dumper('WHATEVER') . "\n" if $dmb{st};
     # CLOSE!!
-    # $dmb_debug_oh->close if $dmbst;
-
-
-    print "a block of code";
-    print "indent with spaces";
-
-   A       | Dang         | Table
-  -------- | ------------ | -------------------------------------------
-   1       | `formatted`  | whatever
-   2       | `code`       | blah blah
-
-This is a link [Nice Text](http://actual.uri.com)
-
-A link to an image:
-
-![](fix_lines.gif)
+    # $dmb{oh}->close if $dmb{st};
 
