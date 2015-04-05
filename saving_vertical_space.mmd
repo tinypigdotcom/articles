@@ -1,0 +1,163 @@
+Title: Saving Vertical Space
+Author: David M. Bradford
+css: table.css
+Base Header Level:  2
+
+I was reviewing some code I had written for a simple RPG dice algorithm (although there's already a good module for this, [Game::Dice](https://metacpan.org/release/Games-Dice)) and I realized again that I have a prefererence for functions that can fit on one screen. One strategy is breaking up the code into smaller routines but I sometimes like to compact it vertically as much as possible first.
+
+This function `roll`, given a string of "dice language," should return the results of such a dice roll. An example of this would be "3d10+1" to roll three 10-sided dice and then add 1, or "4d6b3" which says to roll four 6-sided dice and take the best three.
+
+Here's the function before the refactor:
+
+    sub roll {
+        my $input = shift;
+        die unless $input =~ /d/;
+        if ( $input =~ /(\d*)d(\d+)\s*(\D?)\s*(\d*)/ ) {
+            my $num   = $1 || 1;
+            my $die   = $2;
+            my $plus  = $3;
+            my $end   = $4;
+            my $total = 0;
+            my @dice;
+            for my $count ( 1 .. $num ) {
+                my $single = int( rand($die) ) + 1;
+                push @dice, $single;
+                print "$single\n";
+            }
+            if ( $plus eq 'b' ) {
+                if ( $end > $num ) {
+                    $end = $num;
+                }
+                @dice = sort { $b <=> $a } @dice;
+                $#dice = $end - 1;
+            }
+            for my $die (@dice) {
+                $total += $die;
+            }
+            if ( $plus eq '+' ) {
+                $total += $end;
+            }
+            elsif ( $plus eq '-' ) {
+                $total -= $end;
+            }
+            elsif ( $plus eq '*' ) {
+                $total *= $end;
+            }
+            elsif ( $plus eq '/' ) {
+                $total /= $end;
+            }
+            return $total;
+        }
+        return;
+    }
+
+
+The first thing I did is to delete the first of this pair of lines, which was redundant, because the line that follows also checks the format of the input:
+
+    die unless $input =~ /d/;
+    if ( $input =~ /(\d*)d(\d+)\s*(\D?)\s*(\d*)/ ) {
+
+But instead of having that big `if` block, I changed it to this:
+
+    return unless $input =~ /(\d*)d(\d+)\s*(\D?)\s*(\d*)/;
+
+Then I combined these:
+
+    my $die   = $2;
+    my $plus  = $3;
+    my $end   = $4;
+
+into this:
+
+    my ($die,$plus,$end) = ($2,$3,$4);
+
+Once I decided I didn't need to print each individual die as it was rolled, I could reduce this:
+
+    for my $count ( 1 .. $num ) {
+        my $single = int( rand($die) ) + 1;
+        push @dice, $single;
+        print "$single\n";
+    }
+
+to this:
+
+    push @dice, int(rand($die))+1 for ( 1..$num );
+
+Then, I changed this:
+
+    if ( $end > $num ) {
+        $end = $num;
+    }
+
+To use the postfix `if`:
+
+    $end =  $num if $end > $num;
+
+and this:
+
+    for my $die (@dice) {
+        $total += $die;
+    }
+
+to use postfix `for`:
+
+    $total += $_ for @dice;
+
+One thing I like to do with an `if/else` chain like this:
+
+    if ( $plus eq '+' ) {
+        $total += $end;
+    }
+    elsif ( $plus eq '-' ) {
+        $total -= $end;
+    }
+    elsif ( $plus eq '*' ) {
+        $total *= $end;
+    }
+    elsif ( $plus eq '/' ) {
+        $total /= $end;
+    }
+
+is to compress it like this:
+
+    if    ( $plus eq '+' ) { $total += $end }
+    elsif ( $plus eq '-' ) { $total -= $end }
+    elsif ( $plus eq '*' ) { $total *= $end }
+    elsif ( $plus eq '/' ) { $total /= $end }
+
+Since it's still quite short in width and the syntax can lined up to be quite readable.
+
+So the final version of the refactored function is:
+
+    sub roll {
+        my $input = shift;
+        return unless $input =~ /(\d*)d(\d+)\s*(\D?)\s*(\d*)/;
+        my $num = $1 || 1;
+        my ($die,$plus,$end) = ($2,$3,$4);
+        my $total = 0;
+        my @dice;
+        push @dice, int(rand($die))+1 for ( 1..$num );
+        if ( $plus eq 'b' ) {
+            $end =  $num if $end > $num;
+            @dice = sort { $b <=> $a } @dice;
+            $#dice = $end-1;
+        }
+        $total += $_ for @dice;
+        if    ( $plus eq '+' ) { $total += $end }
+        elsif ( $plus eq '-' ) { $total -= $end }
+        elsif ( $plus eq '*' ) { $total *= $end }
+        elsif ( $plus eq '/' ) { $total /= $end }
+        return $total;
+    }
+
+Now you can make things a LOT smaller (see [Perl Golf](http://c2.com/cgi/wiki?PerlGolf) for more info)) but readability is important to me, and I think this is arguably as readable as the original.  I was actually a little surprised that [perltidy](https://metacpan.org/pod/Perl::Tidy) barely touched the `if/elsif` structure, just screwing up the alignment a little on the first line:
+
+        if ( $plus eq '+' ) { $total += $end }
+        elsif ( $plus eq '-' ) { $total -= $end }
+        elsif ( $plus eq '*' ) { $total *= $end }
+        elsif ( $plus eq '/' ) { $total /= $end }
+
+The code doesn't strictly adhere to [Perl Best Practices](http://shop.oreilly.com/product/9780596001735.do), which is something I like to use as a guide for the most part, but [perlcritic](https://metacpan.org/pod/Perl::Critic) doesn't start to complain until the `cruel` setting, then bringing up things like postfix `if`, postfix `for`, and `unless.`
+
+How would you make it smaller while still maintaining readability?
+
