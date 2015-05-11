@@ -1,0 +1,218 @@
+Writing Tests
+
+I received some good feedback for my previous post [Saving Vertical Space](http://tinypig2.blogspot.com/2015/04/saving-vertical-space.html) so I'd like to incorporate some of the suggestions in subsequent posts. Before I implement any of the code changes, the suggestion I should implement first is ... (drumroll) ... TESTING!
+
+As some of you mentioned, I should already have had tests written to verify that the original function performed as expected, so that I can be confident that after I make changes to the function that I haven't introduced a bug.
+
+If you build a module using using [h2xs](http://perldoc.perl.org/h2xs.html), you get a nifty test setup for free.
+
+    $ h2xs -AX Roller
+    Defaulting to backwards compatibility with perl 5.20.1
+    If you intend this module to be compatible with earlier perl versions, please
+    specify a minimum perl version with the -b option.
+
+    Writing Roller/lib/Roller.pm
+    Writing Roller/Makefile.PL
+    Writing Roller/README
+    Writing Roller/t/Roller.t
+    Writing Roller/Changes
+    Writing Roller/MANIFEST
+
+If I make my Makefile
+
+    $ perl Makefile.PL
+    Checking if your kit is complete...
+    Looks good
+    Generating a Unix-style Makefile
+    Writing Makefile for Roller
+    Writing MYMETA.yml and MYMETA.json
+
+I can run the default tests:
+
+    $ make test
+    cp lib/Roller.pm blib/lib/Roller.pm
+    PERL_DL_NONLAZY=1 /home/dave/perl5/perlbrew/perls/perl-5.20.1/bin/perl "-MExtUtils::Command::MM" "-MTest::Harness" "-e" "undef *Test::Harness::Switches; test_harness(0, 'blib/lib', 'blib/arch')" t/*.t
+    t/Roller.t .. ok
+    All tests successful.
+    Files=1, Tests=1,  0 wallclock secs ( 0.01 usr  0.01 sys +  0.02 cusr  0.00 csys =  0.04 CPU)
+    Result: PASS
+
+There's not much in the default test file, since we haven't done any coding yet:
+
+    $ cat t/Roller.t
+    # Before 'make install' is performed this script should be runnable with
+    # 'make test'. After 'make install' it should work as 'perl Roller.t'
+
+    #########################
+
+    # change 'tests => 1' to 'tests => last_test_to_print';
+
+    use strict;
+    use warnings;
+
+    use Test::More tests => 1;
+    BEGIN { use_ok('Roller') };
+
+    #########################
+
+    # Insert your test code below, the Test::More module is use()ed here so read
+    # its man page ( perldoc Test::More ) for help writing this test script.
+
+I cleaned up `lib/Roller.pm`, completed the basic [POD](http://perldoc.perl.org/perlpod.html) and added the `roll()` function.
+
+<perl>
+package Roller;
+
+use strict;
+use warnings;
+
+require Exporter;
+
+our @ISA = qw(Exporter);
+
+our %EXPORT_TAGS = ( 'all' => [ qw(roll) ] );
+our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
+our @EXPORT = qw( );
+
+our $VERSION = '0.01';
+
+sub roll {
+    my $input = shift;
+    return unless $input =~ /(\d*)d(\d+)\s*(\D?)\s*(\d*)/;
+    my $num = $1 || 1;
+    my ($die,$plus,$end) = ($2,$3,$4);
+    my $total = 0;
+    my @dice;
+    push @dice, int(rand($die))+1 for ( 1..$num );
+    if ( $plus eq 'b' ) {
+        $end =  $num if $end > $num;
+        @dice = sort { $b <=> $a } @dice;
+        $#dice = $end-1;
+    }
+    $total += $_ for @dice;
+    if    ( $plus eq '+' ) { $total += $end }
+    elsif ( $plus eq '-' ) { $total -= $end }
+    elsif ( $plus eq '*' ) { $total *= $end }
+    elsif ( $plus eq '/' ) { $total /= $end }
+    return $total;
+}
+
+1;
+</perl>
+
+    __END__
+
+    =head1 NAME
+
+    Roller - Perl extension for generating dice rolls from a "dice language"
+    string such as "3d6+1".
+
+    =head1 SYNOPSIS
+
+    use Roller ':all';
+    print roll('d20');
+
+    =head1 DESCRIPTION
+
+    Roller's single function C<roll()> generates dice rolls from a "dice language"
+    string such as "3d6+1".
+
+    =head2 EXPORT
+
+    None by default.
+
+    =head1 AUTHOR
+
+    David M. Bradford, E<lt>davembradford@gmail.comE<gt>
+
+    =head1 COPYRIGHT AND LICENSE
+
+    Copyright (C) 2015 by David M. Bradford
+
+    This library is free software; you can redistribute it and/or modify
+    it under the same terms as Perl itself, either Perl version 5.20.1 or,
+    at your option, any later version of Perl 5 you may have available.
+
+    =cut
+
+I also renamed `t/Roller.t` to `t/01-Roller.t` and copied it to `t/02-rolls.t` to put new tests in. Now how do we test against random numbers?  Here was my first stab at it:
+
+<perl>
+use strict;
+use warnings;
+
+use Test::More tests => 50;
+use Roller ':all';
+
+for ( 1..50 ) {
+    my $roll = roll('1d4');
+    ok( ($roll >= 1 and $roll <= 4), 'roll() is valid');
+}
+</perl>
+
+
+
+
+
+
+
+* minor code change
+* devel::cover
+*     pic
+* other considerations
+
+done
+* feedback
+
+
+The *first* thing I did is to delete the first of this pair of lines, which was redundant, because the line that follows also checks the format of the input:
+
+<perl old>
+die unless $input =~ /d/;
+if ( $input =~ /(\d*)d(\d+)\s*(\D?)\s*(\d*)/ ) {
+</perl>
+
+But instead of having that big `if` block, I changed it to this:
+
+<perl>
+return unless $input =~ /(\d*)d(\d+)\s*(\D?)\s*(\d*)/;
+</perl>
+
+Then I combined these:
+
+<perl>
+die unless $input =~ /d/;
+if ( $input =~ /(\d*)d(\d+)\s*(\D?)\s*(\d*)/ ) {
+
+return unless $input =~ /(\d*)d(\d+)\s*(\D?)\s*(\d*)/;
+</perl>
+
+and made them old:
+
+Title: TEMPLATE_TITLE1
+Author: David M. Bradford
+css: table.css
+Base Header Level:  2
+
+Header1
+=======
+
+Header2
+-------
+
+Normal text with some `code`.
+
+    print "a block of code";
+    print "indent with spaces";
+
+   A       | Dang         | Table
+  -------- | ------------ | -------------------------------------------
+   1       | `formatted`  | whatever
+   2       | `code`       | blah blah
+
+This is a link [Nice Text](http://actual.uri.com)
+
+A link to an image:
+
+![](fix_lines.gif)
+
