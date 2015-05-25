@@ -98,42 +98,42 @@ sub roll {
 }
 
 1;
+
+__END__
+
+=head1 NAME
+
+Roller - Perl extension for generating dice rolls from a "dice language"
+string such as "3d6+1".
+
+=head1 SYNOPSIS
+
+use Roller ':all';
+print roll('d20');
+
+=head1 DESCRIPTION
+
+Roller's single function C<roll()> generates dice rolls from a "dice language"
+string such as "3d6+1".
+
+=head2 EXPORT
+
+None by default.
+
+=head1 AUTHOR
+
+David M. Bradford, E<lt>davembradford@gmail.comE<gt>
+
+=head1 COPYRIGHT AND LICENSE
+
+Copyright (C) 2015 by David M. Bradford
+
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself, either Perl version 5.20.1 or,
+at your option, any later version of Perl 5 you may have available.
+
+=cut
 </perl>
-
-    __END__
-
-    =head1 NAME
-
-    Roller - Perl extension for generating dice rolls from a "dice language"
-    string such as "3d6+1".
-
-    =head1 SYNOPSIS
-
-    use Roller ':all';
-    print roll('d20');
-
-    =head1 DESCRIPTION
-
-    Roller's single function C<roll()> generates dice rolls from a "dice language"
-    string such as "3d6+1".
-
-    =head2 EXPORT
-
-    None by default.
-
-    =head1 AUTHOR
-
-    David M. Bradford, E<lt>davembradford@gmail.comE<gt>
-
-    =head1 COPYRIGHT AND LICENSE
-
-    Copyright (C) 2015 by David M. Bradford
-
-    This library is free software; you can redistribute it and/or modify
-    it under the same terms as Perl itself, either Perl version 5.20.1 or,
-    at your option, any later version of Perl 5 you may have available.
-
-    =cut
 
 I also renamed `t/Roller.t` to `t/01-Roller.t` and copied it to `t/02-rolls.t` to put new tests in. Now how do we test against random numbers?  Here was my first stab at it:
 
@@ -151,6 +151,24 @@ for ( 1..50 ) {
 </perl>
 
 
+But I can get even more specific than that. Is 2.5 a valid number for a die roll? No.
+
+<perl>
+use strict;
+use warnings;
+
+use Test::More tests => 50;
+use Roller ':all';
+
+for ( 1..50 ) {
+    my $roll = roll('1d4');
+    ok( ($roll == 1
+      or $roll == 2
+      or $roll == 3
+      or $roll == 4), 'roll() is valid');
+}
+</perl>
+
 
 
 
@@ -164,55 +182,4 @@ for ( 1..50 ) {
 done
 * feedback
 
-
-The *first* thing I did is to delete the first of this pair of lines, which was redundant, because the line that follows also checks the format of the input:
-
-<perl old>
-die unless $input =~ /d/;
-if ( $input =~ /(\d*)d(\d+)\s*(\D?)\s*(\d*)/ ) {
-</perl>
-
-But instead of having that big `if` block, I changed it to this:
-
-<perl>
-return unless $input =~ /(\d*)d(\d+)\s*(\D?)\s*(\d*)/;
-</perl>
-
-Then I combined these:
-
-<perl>
-die unless $input =~ /d/;
-if ( $input =~ /(\d*)d(\d+)\s*(\D?)\s*(\d*)/ ) {
-
-return unless $input =~ /(\d*)d(\d+)\s*(\D?)\s*(\d*)/;
-</perl>
-
-and made them old:
-
-Title: TEMPLATE_TITLE1
-Author: David M. Bradford
-css: table.css
-Base Header Level:  2
-
-Header1
-=======
-
-Header2
--------
-
-Normal text with some `code`.
-
-    print "a block of code";
-    print "indent with spaces";
-
-   A       | Dang         | Table
-  -------- | ------------ | -------------------------------------------
-   1       | `formatted`  | whatever
-   2       | `code`       | blah blah
-
-This is a link [Nice Text](http://actual.uri.com)
-
-A link to an image:
-
-![](fix_lines.gif)
 
