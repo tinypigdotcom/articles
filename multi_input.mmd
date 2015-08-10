@@ -1,0 +1,184 @@
+Accepting Input from Multiple Sources
+
+One of the corners I often paint myself into when developing a tool is only accepting one type of input, usually STDIN, the standard input stream, like a pipeline (ex: `cat fruit.txt | grep apple`) or a redirect (ex: `grep apple < fruit.txt`)
+
+What inevitably happens is I end up wanting the tool to work like any Unix tool and accept different kinds of input (filenames or arguments on the command line, for example.)
+
+Finally I got fed up with it and added a function called `multi_input()` to my library.  Here is how it works:
+
+First, the setup:
+
+    $ cat >meats
+    chicken
+    beef
+    ^D
+    $ cat >fruits
+    apple
+    orange
+    banana
+    ^D
+    $ cat >vegetables
+    carrot
+    lettuce
+    broccoli
+    cauliflower
+    ^D
+    $ cat >a.out
+    this is just my
+    default input file
+    ^D
+
+To illustrate use of the function, I just reverse the input to do something "interesting" with it. The operative code is:
+
+<perl>
+my $input = multi_input();
+my $reversed = reverse $input;
+print "$input\n";
+print "$reversed\n";
+</perl>
+
+So now I can interact with the tool in a variety of ways, starting with my "usual" way, STDIN:
+
+    $ ./reverse.pl < vegetables
+    current_input_type is: STDIN
+    carrot
+    lettuce
+    broccoli
+    cauliflower
+
+    rewolfiluac
+    iloccorb
+    ecuttel
+    torrac
+
+Or STDIN by way of a pipe (this is the same mechanism in the code, but just to give another example):
+
+    $ cat fruits | ./reverse.pl
+    current_input_type is: STDIN
+    apple
+    orange
+    banana
+
+    ananab
+    egnaro
+    elppa
+
+Or filenames provided on the command line:
+
+    $ ./reverse.pl meats fruits
+    current_input_type is: FILEARGS
+    chicken
+    beef
+    apple
+    orange
+    banana
+
+    ananab
+    egnaro
+    elppa
+    feeb
+    nekcihc
+
+Or input provided on the command line:
+
+    $ ./reverse.pl this is not a list of filenames
+    current_input_type is: ARGS
+    this is not a list of filenames
+    semanelif fo tsil a ton si siht
+
+And finally, the ultimate lazy, my default input file `a.out`:
+
+    $ ./reverse.pl
+    current_input_type is: DEFAULT
+    this is just my
+    default input file
+
+    elif tupni tluafed
+    ym tsuj si siht
+
+Here is the full code listing with comments:
+
+<perl>
+
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+use Term::ReadKey; # for ReadMode() below
+
+sub multi_input {
+    my $input = '';
+    my $VERBOSE = 1;
+
+    my %INPUT_TYPE = ( # names for self-documenting code
+       NONE     => 0,
+       ARGS     => 1,
+       FILEARGS => 2,
+       STDIN    => 3,
+       DEFAULT  => 4,
+    );
+    my %INPUT_LABEL = reverse %INPUT_TYPE; # allow lookup by number
+
+    my $current_input_type = $INPUT_TYPE{NONE};
+
+    # I could have done this all in one "shot" but I wanted to keep the
+    # detection of input type separate from the processing of input
+    my $char;
+    if ( @ARGV ) {
+        # Note that a filename typo will result in processing of the command
+        # line like it is normal input, but that won't matter in this example.
+        if ( -f $ARGV[0] ) {
+            $current_input_type = $INPUT_TYPE{FILEARGS};
+        }
+        else {
+            $current_input_type = $INPUT_TYPE{ARGS};
+        }
+    }
+    else {
+        # Code from Perl Cookbook. We peek into STDIN stream to see if
+        # anything's there. The read still counts, though, so we need to save
+        # $char. perldoc Term::ReadKey for information on ReadMode() and
+        # ReadKey()
+        ReadMode('cbreak');
+        if (defined ($char = ReadKey(-1)) ) {
+            $current_input_type = $INPUT_TYPE{STDIN};
+        }
+        else {
+            $current_input_type = $INPUT_TYPE{DEFAULT};
+        }
+        ReadMode('normal');
+    }
+    warn "current_input_type is: $INPUT_LABEL{$current_input_type}\n"
+        if $VERBOSE;
+
+    if ( $current_input_type == $INPUT_TYPE{FILEARGS} ) {
+        local $/; # Slurp the whole file in at once, not line-by-line
+        for my $file (@ARGV) {
+            open(my $ifh, '<', $file) or die "Can't open $file: $!";
+            $input .= <$ifh>;
+            close($ifh) || warn "close failed: $!";
+        }
+    }
+    elsif ( $current_input_type == $INPUT_TYPE{ARGS} ) {
+        $input = join ' ', @ARGV;
+    }
+    elsif ( $current_input_type == $INPUT_TYPE{STDIN} ) {
+            # Slurp all STDIN at once, not line-by-line
+            $input = $char . do { local $/; <STDIN> };
+    }
+    else {
+        my $file = "a.out";
+        open(my $ifh, '<', $file) or die "Can't open $file: $!";
+        $input = do { local $/; <$ifh> };
+        close($ifh) || warn "close failed: $!";
+    }
+    return $input;
+}
+
+my $input = multi_input();
+my $reversed = reverse $input;
+print "$input\n";
+print "$reversed\n";
+</perl>
+
