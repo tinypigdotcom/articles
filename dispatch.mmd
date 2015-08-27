@@ -1,0 +1,198 @@
+At a previous job, I saw some code that asked the user which function they wanted to run and then executed a subroutine with that name.  This code demonstrates why such a practice is bad:
+
+<perl old>
+use strict;
+use warnings;
+
+sub greet            { print "Hello!\n"       }
+sub inquire          { print "How are you?\n" }
+sub bye              { print "Farewell!\n"    }
+sub delete_all_files { print "*KABOOM*\n"     }
+
+sub insecure_call {
+    no strict 'refs';
+    shift->();
+}
+
+insecure_call('greet');
+insecure_call('inquire');
+insecure_call('bye');
+insecure_call('delete_all_files');
+</perl>
+
+Output:
+
+    Hello!
+    How are you?
+    Farewell!
+    *KABOOM*
+
+One solution to this is the dispatch table. With a dispatch table, you define up front which calls are legal for an outsider to make:
+
+<perl>
+use strict;
+use warnings;
+
+my %dispatch = (
+    greet   => \&greet,
+    inquire => \&inquire,
+    bye     => \&bye,
+);
+
+sub greet            { print "Hello!\n"       }
+sub inquire          { print "How are you?\n" }
+sub bye              { print "Farewell!\n"    }
+sub delete_all_files { print "*KABOOM*\n"     }
+
+sub secure_call {
+    my $call = shift;
+    if ( ref $dispatch{$call} eq 'CODE' ) {
+        $dispatch{$call}->();
+    }
+    else {
+        warn "Invalid call $call";
+    }
+}
+
+secure_call('greet');
+secure_call('inquire');
+secure_call('bye');
+secure_call('delete_all_files');
+</perl>
+
+Output:
+
+    Hello!
+    How are you?
+    Farewell!
+    Invalid call delete_all_files at example_2a line 22.
+
+The thing that bugs me about this particular solution (and I'll admit it's minor) is the repetition:
+
+<perl old>
+my %dispatch = (
+    greet   => \&greet,
+    inquire => \&inquire,
+    bye     => \&bye,
+);
+</perl>
+
+To me, this reads like:
+
+    To go to greet, type 'greet'.
+    To go to inquire, type 'inquire'.
+    To go to bye, type 'bye'.
+
+When it could just be asking "Which function do you wish to use?"
+
+So, we could build the dispatch table dynamically from a list of acceptable calls:
+
+<perl>
+use strict;
+use warnings;
+
+my %dispatch;
+my @valid_calls = qw( greet inquire bye );
+
+sub greet            { print "Hello!\n"       }
+sub inquire          { print "How are you?\n" }
+sub bye              { print "Farewell!\n"    }
+sub delete_all_files { print "*KABOOM*\n"     }
+
+sub build_dispatch_table {
+    no strict 'refs';
+    %dispatch = map { $_ => *{$_} } @valid_calls;
+}
+
+sub secure_call {
+    my $call = shift;
+    if ( $dispatch{$call} ) {
+        $dispatch{$call}->();
+    }
+    else {
+        warn "Invalid call $call\n";
+    }
+}
+
+build_dispatch_table();
+secure_call('greet');
+secure_call('inquire');
+secure_call('bye');
+secure_call('delete_all_files');
+
+print "\nBut, now this works because of the typeglob *{}\n";
+
+our @greet = qw( This is an array );
+print "@{$dispatch{greet}}\n";
+
+print "which annoys me even though it's probably inconsequential\n";
+</perl>
+
+Output:
+
+    Hello!
+    How are you?
+    Farewell!
+    Invalid call delete_all_files
+
+    But, now this works because of the typeglob *{}
+    This is an array
+    which annoys me even though it's probably inconsequential
+
+In addition to the typeglob annoyance, there is still a little repetition there: `greet`, `inquire` and `bye` still appear more than once in the code. I don't actually find this to be a huge deal, but how might we solve those issues? One way is including the code itself in the dispatch table:
+
+<perl>
+use strict;
+use warnings;
+
+my %dispatch = (
+
+# Documentation for greet can go here
+greet =>
+    sub {
+        my $greeting = shift || 'Howdy!';
+        print "$greeting\n";
+    },
+
+# Documentation for inquire can go here
+inquire =>
+    sub {
+        print "How are you?\n";
+    },
+
+# Documentation for farewell can go here
+farewell =>
+    sub {
+        print "Bye!\n";
+    },
+
+
+);
+
+sub delete_all_files { print "*KABOOM*" }
+
+sub api {
+    my $call = shift;
+    if ( $dispatch{$call} ) {
+        $dispatch{$call}->(@_);
+    }
+    else {
+        print "Not executing unknown API call $call\n";
+    }
+}
+
+api('greet','Hello.');
+api('inquire');
+api('farewell');
+api('delete_all_files');
+</perl>
+
+Output:
+
+    Hello.
+    How are you?
+    Bye!
+    Not executing unknown API call delete_all_files
+
+One argument against this is it adds visual complexity to the code: it's one more layer that a new developer on the project would need to mentally parse before coming up-to-speed on the code. But, that may be minor, and I think these formatting choices are developer-friendly.
+
