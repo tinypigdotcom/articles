@@ -1,0 +1,81 @@
+Tattletale Variables
+
+Sometimes you might be faced with a huge program that, *somewhere*, is changing a variable's value to something undesired.
+
+<perl old>
+use Data::Dumper;
+
+sub some_long_faraway_function {
+    my $href = shift;
+    # Pretend there's a lot of code here I don't want to sift through
+    $href->{bananas} = 'some bad value';
+}
+
+my $shopping_list = {
+    apples => 1,
+    pears => 3,
+    bananas => 5,
+};
+some_long_faraway_function($shopping_list);
+warn Dumper(\$shopping_list);
+</perl>
+
+Output:
+
+    $VAR1 = \{
+                'apples' => 1,
+                'bananas' => 'some bad value',
+                'pears' => 3
+            };
+
+You don't know where it's being changed, but you need to find out. Change the variable so that it tells you where it's being changed.
+
+<perl>
+package TattletaleScalar;
+use Carp qw(cluck);
+require Tie::Scalar;
+our @ISA = qw(Tie::StdScalar);
+sub STORE {
+    warn "TATTLETALE variable set to {$_[1]}";
+    cluck();
+    ${$_[0]} = $_[1];
+}
+
+package main;
+
+use Data::Dumper;
+
+sub some_long_faraway_function {
+    my $href = shift;
+    # Pretend there's a lot of code here I don't want to sift through
+    $href->{bananas} = 'some bad value';
+}
+
+my $shopping_list = {
+    apples => 1,
+    pears => 3,
+    bananas => 5,
+};
+my $tmp = $shopping_list->{bananas}; # Save current value
+tie $shopping_list->{bananas}, 'TattletaleScalar';
+$shopping_list->{bananas} = $tmp; # Restore saved value
+some_long_faraway_function($shopping_list);
+warn Dumper(\$shopping_list);
+
+</perl>
+
+Now we can see the stack every time the variable is changed:
+
+    TATTLETALE variable set to {5} at example.pl line 7.
+    at example.pl line 8.
+        TattletaleScalar::STORE(TattletaleScalar=SCALAR(0x7fac290d3260), 5) called at example.pl line 29
+    TATTLETALE variable set to {some bad value} at example.pl line 7.
+    at example.pl line 8.
+        TattletaleScalar::STORE(TattletaleScalar=SCALAR(0x7fac290d3260), "some bad value") called at example.pl line 19
+        main::some_long_faraway_function(HASH(0x7fac29026508)) called at example.pl line 30
+    $VAR1 = \{
+                'apples' => 1,
+                'pears' => 3,
+                'bananas' => 'some bad value'
+            };
+
